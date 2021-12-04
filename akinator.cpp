@@ -213,7 +213,7 @@ Tree* ReadAndMakeTree(FILE *src)
 	fscanf(src, "%[^{}]", buffer);
 	Tree* tree = (Tree*)calloc(1, sizeof(Tree));
 	RET_IF(tree == nullptr, nullptr, "Memory allocation error\n");
-	const int num_of_branches = 2; 		   			  // Our tree is binary
+	const int num_of_branches = 2; 		   			  // Our tree is ibinary
 
 	TreeCtor(tree, num_of_branches, STRING, buffer);  // Warning: transferring the to_save_in_tree, you are responsible for data loss in him
 

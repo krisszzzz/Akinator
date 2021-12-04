@@ -25,7 +25,8 @@ enum TYPE_ID
 {
 	INT,
 	DOUBLE,
-	STRING
+	STRING,
+	CHAR
 };
 
 enum TREE_ERRORS
@@ -52,6 +53,7 @@ struct Tree_node
 	{
 		char  *type_string;
 		int    type_int;
+		char   type_char;
 		double type_double;
 	} data;
 
@@ -77,7 +79,7 @@ int FprintNodeData(Tree_node *node, FILE *dst);
 int AddNode(Tree_node *tree_node, const int node_type, const void *data);
 
 #define TreeGraphicalDump(tree)  \
-TreeGraphicalDump_(&tree, #tree);
+TreeGraphicalDump_(tree, #tree);
 
 int TreeGraphicalDump_(Tree *tree, const char *tree_name);
 

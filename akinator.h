@@ -3,7 +3,7 @@
 #define AKINATOR_INCLUDED
 
 #include "tree.h"
-#include "../Stack.h"
+#include "Stack/Stack.h"
 
 typedef Tree_node* node_t;
 

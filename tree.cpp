@@ -8,6 +8,13 @@ inline int max(int a, int b)
 	return (a <= b) ? b : a;
 }
 
+#define SIMPLE_NODE_TYPE_ADD(type_code, type_name) 	  		 \
+case type_code: {								      		 \
+	to_fill->data.type_##type_name = *(type_name*)node_data; \
+	to_fill->type_id          	   = type_code;		     	 \
+	break;										  			 \
+}
+
 int FillData(Tree_node *to_fill, const int node_type, const void *node_data)
 {
 
@@ -15,23 +22,16 @@ int FillData(Tree_node *to_fill, const int node_type, const void *node_data)
 
 	switch(node_type)
 	{
-		case INT: {
-			to_fill->data.type_int = *(int*)node_data;
-			to_fill->type_id       = INT;
-			break;
-		}
-		case STRING: {
+		case STRING: {												// string cannot be added by macros, because need to alloc memory
 			size_t to_alloc           = strlen((char*)node_data);
 			to_fill->data.type_string = (char*)calloc(to_alloc + 1, sizeof(char));
 			to_fill->type_id          = STRING;
 			memcpy(to_fill->data.type_string, node_data, to_alloc);
 			break;
 		}
-		case DOUBLE: {
-			to_fill->data.type_double = *(double*)node_data;
-			to_fill->type_id          = DOUBLE;
-			break;
-		}
+		SIMPLE_NODE_TYPE_ADD(INT, 	 int);
+		SIMPLE_NODE_TYPE_ADD(DOUBLE, double);
+		SIMPLE_NODE_TYPE_ADD(CHAR,   char);
 		default: {
 			ErrorPrint("Unknown type name: %s", node_type);
 			to_fill->type_id = -1;
@@ -40,6 +40,8 @@ int FillData(Tree_node *to_fill, const int node_type, const void *node_data)
 	}
 	return 0;
 }
+
+#undef SIMPLE_NODE_TYPE_ADD
 
 int CheckNodeType(int node_type)
 {
@@ -139,12 +141,41 @@ int AddNode(Tree_node *tree_node, const int node_type, const void *data)
 #define NO_NODES_EXPECT_ROOT_NODE         \
 !tree->root_node.child_nodes[0].is_filled
 
+int DefineAndPrintColor(Tree_node *node, FILE *dst)
+{
+	switch(node->type_id)
+	{
+		case INT: {
+			fprintf(dst, "#00BFFF");
+			break;
+		}
+		case CHAR: {
+			fprintf(dst, "#FFFF00");
+			break;
+		}
+		case STRING: {
+			fprintf(dst, "#00FF00");
+			break;
+		}
+		case DOUBLE: {
+			fprintf(dst, "#800080");
+			break;
+		}
+		default: {
+			ErrorPrint("No such type id - %d", node->type_id);
+		}
+	}	
+	return 0;
+}
+
 static int PrintNodeToDump(Tree *tree, Tree_node *node, FILE* dst)
 {
 										// This node is root nood and no noodes exclude him
 	if(node->child_nodes == nullptr || (node == &tree->root_node && NO_NODES_EXPECT_ROOT_NODE)) {
 		fprintf(dst, "dot_%p;\n", node);
-		fprintf(dst, "dot_%p[shape = record, fontname = Helvetica, label = \"value: | ", node);
+		fprintf(dst, "dot_%p[shape = record, style=\"filled\", fontname = Helvetica, fillcolor=\"", node);
+		DefineAndPrintColor(node, dst);
+		fprintf(dst, "\", label = \"value: | ");
 		RET_IF(FprintNodeData(node, dst) == INCCORECT_NODE_TYPE, INCCORECT_NODE_TYPE, "Unknown name of type\n");
 		fprintf(dst, "\" ]\n");
 		return 0;
@@ -155,7 +186,9 @@ static int PrintNodeToDump(Tree *tree, Tree_node *node, FILE* dst)
 		fprintf(dst, "dot_%p->", node);
 		PrintNodeToDump(tree, &node->child_nodes[node_number], dst);	
 
-		fprintf(dst, "dot_%p[shape = record, fontname = Helvetica, label = \"value: | ", node);
+		fprintf(dst, "dot_%p[shape = record, fontname = Helvetica, style=\"filled\", fillcolor=\"", node);
+		DefineAndPrintColor(node, dst);
+		fprintf(dst, "\", label = \"value: | ");
 		RET_IF(FprintNodeData(node, dst) == INCCORECT_NODE_TYPE, INCCORECT_NODE_TYPE, "Unknown name of type\n");
 		fprintf(dst, "\" ]\n");	
 	}
@@ -172,7 +205,7 @@ int TreeGraphicalDump_(Tree *tree, const char *tree_name)
 	FILE *to_gener_graphviz_code_for_debug = fopen(tree_name, "w");
 	RET_IF(to_gener_graphviz_code_for_debug == nullptr, INCCORECT_FILE_OPEN, "Something went wrong while opening "
 																			 "file to dump tree, tree name - %c\n",
-																			 tree_name);
+ 		 																	  tree_name);
 
 	fprintf(to_gener_graphviz_code_for_debug, "digraph G {\n"
 											  "rankdir = NB\n");
@@ -188,6 +221,12 @@ int TreeGraphicalDump_(Tree *tree, const char *tree_name)
 
 // +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 
+
+#define ADD_TYPE_TO_PRINT(type_code, type_name, specifier)		\
+case type_code: {												\
+	fprintf(dst, specifier, node->data.type_##type_name);		\
+	break;														\
+}
 // Print node data
 
 int FprintNodeData(Tree_node *node, FILE *dst)
@@ -195,18 +234,10 @@ int FprintNodeData(Tree_node *node, FILE *dst)
 	RET_IF(node == nullptr, NULLPTR_NODE, "Cannot work with nullptr node\n");
 	switch(node->type_id)
 	{
-		case INT: {
-			fprintf(dst, "%d", node->data.type_int);
-			break;
-		}
-		case STRING: {
-			fprintf(dst, "%s", node->data.type_string);
-			break;
-		}
-		case DOUBLE: {
-			fprintf(dst, "%lf", node->data.type_double);
-			break;
-		}
+		ADD_TYPE_TO_PRINT(INT,    int, 	  "%d");
+		ADD_TYPE_TO_PRINT(STRING, string, "%s");
+		ADD_TYPE_TO_PRINT(DOUBLE, double, "%lf");
+		ADD_TYPE_TO_PRINT(CHAR,   char,   "%c");
 		default: {
 			ErrorPrint("Unknown name of type\n");
 			return INCCORECT_NODE_TYPE;
